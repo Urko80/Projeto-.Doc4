@@ -5,9 +5,13 @@
 #include "config.h"
 #include "display/lcd_display.h"
 #include "web_servo_api.h"
+#include "audio/audio_codec.h"
+#include "protocols/protocol.h"
 
 #include "esp32_camera.h"
+#include <algorithm>
 #include <atomic>
+#include <cstdio>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -15,6 +19,7 @@
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
+#include <esp_timer.h>
 #include <esp_log.h>
 #include "esp_lcd_st7735.h"
 
@@ -23,6 +28,18 @@
 class DocAiS3Cam : public WifiBoard {
 private:
     Button boot_button_;
+
+    // TTP223: entrada digital ativa em nível alto durante o toque.
+    // Se o sensor não responder, revisar o nível lógico e a ligação OUT/GND/3V3.
+    Button touch_button_;
+
+    // DOC TTP223: estado do interpretador de gestos e do menu físico.
+    std::atomic<bool> touch_interrupted_speech_{false};
+    std::atomic<bool> touch_menu_open_{false};
+    esp_timer_handle_t touch_menu_timer_ = nullptr;
+    int touch_menu_index_ = 0;
+    int touch_personality_index_ = 0;
+
     Display* display_ = nullptr;
     bool servo_api_started_ = false;
 
@@ -113,7 +130,207 @@ private:
     }
     // DOC FIM — Estado e ciclo de vida da câmera.
 
+    // ============================================================
+    // DOC TTP223 — MENU, PERSONALIDADES E AÇÕES DO SENSOR
+    // Alterações dos gestos e das opções do menu ficam nesta seção.
+    // ============================================================
+
+    // Exibe o item atualmente selecionado no ST7735.
+    void ShowTouchMenu() {
+        static const char* const menu_items[] = {
+            "Aumentar volume",
+            "Diminuir volume",
+            "Brilho (indisponivel)",
+            "Estado Wi-Fi",
+            "Configuracoes DOC"
+        };
+        constexpr int menu_count = sizeof(menu_items) / sizeof(menu_items[0]);
+        char message[128];
+        snprintf(message, sizeof(message),
+                 "MENU DOC\n> %s\nToque: proxima\nDuplo: selecionar\nLongo: voltar",
+                 menu_items[touch_menu_index_ % menu_count]);
+        if (display_ != nullptr) {
+            display_->ShowNotification(message, 30000);
+        }
+        ESP_LOGI(TAG, "TTP223 menu: %s (%d/%d)",
+                 menu_items[touch_menu_index_], touch_menu_index_ + 1, menu_count);
+    }
+
+    // Fecha automaticamente o menu após 30 s sem interação.
+    static void TouchMenuTimeout(void* arg) {
+        auto* self = static_cast<DocAiS3Cam*>(arg);
+        if (self->touch_menu_open_.exchange(false)) {
+            if (self->display_ != nullptr) {
+                self->display_->SetStatus("DOC");
+            }
+            ESP_LOGI(TAG, "TTP223 menu fechado por inatividade");
+        }
+    }
+
+    void RestartTouchMenuTimer() {
+        if (touch_menu_timer_ != nullptr) {
+            esp_timer_stop(touch_menu_timer_);
+            ESP_ERROR_CHECK(esp_timer_start_once(touch_menu_timer_, 30000000));
+        }
+    }
+
+    void OpenTouchMenu() {
+        touch_menu_open_.store(true);
+        touch_menu_index_ = 0;
+        ShowTouchMenu();
+        RestartTouchMenuTimer();
+    }
+
+    void CloseTouchMenu() {
+        touch_menu_open_.store(false);
+        if (touch_menu_timer_ != nullptr) {
+            esp_timer_stop(touch_menu_timer_);
+        }
+        if (display_ != nullptr) {
+            display_->SetStatus("DOC");
+        }
+        ESP_LOGI(TAG, "TTP223 menu fechado");
+    }
+
+    void MoveTouchMenuNext() {
+        constexpr int menu_count = 5;
+        touch_menu_index_ = (touch_menu_index_ + 1) % menu_count;
+        ShowTouchMenu();
+        RestartTouchMenuTimer();
+    }
+
+    // Consulta o estado atual da aplicação para apresentar no menu.
+    const char* GetTouchDeviceStateLabel() const {
+        switch (Application::GetInstance().GetDeviceState()) {
+            case kDeviceStateStarting: return "Iniciando";
+            case kDeviceStateWifiConfiguring: return "Configurando Wi-Fi";
+            case kDeviceStateIdle: return "Repouso";
+            case kDeviceStateConnecting: return "Conectando";
+            case kDeviceStateListening: return "Escutando";
+            case kDeviceStateSpeaking: return "Falando";
+            case kDeviceStateNotifying: return "Notificacao";
+            case kDeviceStateUpgrading: return "Atualizando";
+            case kDeviceStateActivating: return "Ativando";
+            case kDeviceStateAudioTesting: return "Teste de audio";
+            case kDeviceStateFatalError: return "Erro";
+            default: return "Desconhecido";
+        }
+    }
+
+    // Executa a opção confirmada com toque duplo dentro do menu.
+    void SelectTouchMenuOption() {
+        auto& board = Board::GetInstance();
+        switch (touch_menu_index_) {
+            case 0: {
+                AudioCodec* codec = board.GetAudioCodec();
+                if (codec != nullptr) {
+                    const int new_volume = std::min(100, codec->output_volume() + 5);
+                    codec->SetOutputVolume(new_volume);
+                    char message[48];
+                    snprintf(message, sizeof(message), "Volume: %d%%", new_volume);
+                    display_->ShowNotification(message, 3000);
+                    ESP_LOGI(TAG, "TTP223: volume aumentado para %d", new_volume);
+                }
+                break;
+            }
+            case 1: {
+                AudioCodec* codec = board.GetAudioCodec();
+                if (codec != nullptr) {
+                    const int new_volume = std::max(0, codec->output_volume() - 5);
+                    codec->SetOutputVolume(new_volume);
+                    char message[48];
+                    snprintf(message, sizeof(message), "Volume: %d%%", new_volume);
+                    display_->ShowNotification(message, 3000);
+                    ESP_LOGI(TAG, "TTP223: volume reduzido para %d", new_volume);
+                }
+                break;
+            }
+            case 2:
+                // O backlight está configurado como GPIO_NUM_NC nesta placa.
+                display_->ShowNotification(
+                    "Brilho indisponivel: backlight sem GPIO de controle", 4000);
+                ESP_LOGW(TAG, "TTP223: brilho nao ajustavel (DISPLAY_BACKLIGHT_PIN = NC)");
+                break;
+            case 3: {
+                const char* network_icon = board.GetNetworkStateIcon();
+                char message[64];
+                snprintf(message, sizeof(message), "Estado Wi-Fi: %s",
+                         network_icon != nullptr ? network_icon : "indisponivel");
+                display_->ShowNotification(message, 4000);
+                ESP_LOGI(TAG, "%s", message);
+                break;
+            }
+            case 4: {
+                char message[96];
+                snprintf(message, sizeof(message), "DOC: %s\nEscuta: toque curto\nPersonalidade: toque duplo",
+                         GetTouchDeviceStateLabel());
+                display_->ShowNotification(message, 5000);
+                ESP_LOGI(TAG, "TTP223: exibindo configuracoes/status do DOC");
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    // Fora do menu, o toque duplo percorre as três personalidades visuais.
+    void CycleTouchPersonality() {
+        static const char* const emotions[] = {"neutral", "listening", "happy"};
+        static const char* const labels[] = {"Neutro", "Atento", "Divertido"};
+        constexpr int personality_count = sizeof(emotions) / sizeof(emotions[0]);
+        touch_personality_index_ = (touch_personality_index_ + 1) % personality_count;
+        if (display_ != nullptr) {
+            display_->SetEmotion(emotions[touch_personality_index_]);
+            display_->ShowNotification(labels[touch_personality_index_], 1800);
+        }
+        ESP_LOGI(TAG, "TTP223 personalidade: %s", labels[touch_personality_index_]);
+    }
+
+    // Toque curto: alterna o estado de escuta; no menu, avança a seleção.
+    void HandleTouchShort() {
+        if (touch_menu_open_.load()) {
+            MoveTouchMenuNext();
+            return;
+        }
+
+        auto& app = Application::GetInstance();
+        const auto state = app.GetDeviceState();
+        app.ToggleChatState();
+        if (display_ != nullptr) {
+            display_->ShowNotification(
+                state == kDeviceStateListening ? "Solicitando: escuta desativada"
+                                               : "Solicitando: escuta ativada",
+                1800);
+        }
+        ESP_LOGI(TAG, "TTP223: alternancia de escuta solicitada");
+    }
+
+    // Toque duplo: seleciona no menu ou troca a personalidade fora dele.
+    void HandleTouchDouble() {
+        if (touch_menu_open_.load()) {
+            SelectTouchMenuOption();
+            // A opção selecionada apresenta o resultado por alguns segundos.
+            // O menu fecha após a seleção para não sobrescrever essa confirmação.
+            touch_menu_open_.store(false);
+            if (touch_menu_timer_ != nullptr) {
+                esp_timer_stop(touch_menu_timer_);
+            }
+            return;
+        }
+        CycleTouchPersonality();
+    }
+
+    // Toque longo: abre o menu ou volta/fecha o menu atual.
+    void HandleTouchLong() {
+        if (touch_menu_open_.load()) {
+            CloseTouchMenu();
+        } else {
+            OpenTouchMenu();
+        }
+    }
+
     void InitializeButtons() {
+        // Botão BOOT original: comportamento preservado.
         boot_button_.OnClick([this]() {
             auto& app = Application::GetInstance();
             if (app.GetDeviceState() == kDeviceStateStarting) {
@@ -121,6 +338,43 @@ private:
                 return;
             }
             app.ToggleChatState();
+        });
+
+        // DOC TTP223: qualquer toque durante a fala interrompe imediatamente
+        // a resposta. A flag impede que a soltura seja interpretada como outro gesto.
+        touch_button_.OnPressDown([this]() {
+            auto& app = Application::GetInstance();
+            if (app.GetDeviceState() == kDeviceStateSpeaking) {
+                touch_interrupted_speech_.store(true);
+                app.Schedule([&app]() {
+                    app.AbortSpeaking(kAbortReasonNone);
+                });
+                ESP_LOGI(TAG, "TTP223: interrupcao da resposta solicitada");
+            }
+        });
+
+        // Toque simples: o evento só é entregue após a janela de detecção de duplo toque.
+        touch_button_.OnClick([this]() {
+            if (touch_interrupted_speech_.exchange(false)) {
+                return;
+            }
+            HandleTouchShort();
+        });
+
+        // Toque duplo: não dispara dois comandos de toque curto.
+        touch_button_.OnDoubleClick([this]() {
+            if (touch_interrupted_speech_.exchange(false)) {
+                return;
+            }
+            HandleTouchDouble();
+        });
+
+        // Toque longo: abre o menu; dentro dele, volta/fecha.
+        touch_button_.OnLongPress([this]() {
+            if (touch_interrupted_speech_.exchange(false)) {
+                return;
+            }
+            HandleTouchLong();
         });
     }
 
@@ -213,10 +467,22 @@ public:
     }
     // DOC FIM
 
-    DocAiS3Cam() : boot_button_(BOOT_BUTTON_GPIO) {
+    DocAiS3Cam()
+        : boot_button_(BOOT_BUTTON_GPIO),
+          touch_button_(TOUCH_BUTTON_GPIO, true, DOC_TTP223_LONG_PRESS_MS, 0) {
         ESP_LOGI(TAG, "DOC AI S3CAM board startup");
         InitializeButtons();
         InitializeDisplay();
+
+        // Timer de inatividade do menu físico do TTP223.
+        esp_timer_create_args_t touch_menu_timer_args = {
+            .callback = TouchMenuTimeout,
+            .arg = this,
+            .dispatch_method = ESP_TIMER_TASK,
+            .name = "doc_touch_menu",
+            .skip_unhandled_events = true,
+        };
+        ESP_ERROR_CHECK(esp_timer_create(&touch_menu_timer_args, &touch_menu_timer_));
 
         // A Application registra seu callback durante Initialize().
         // O encadeamento do callback é implementado em SetNetworkEventCallback().
@@ -230,6 +496,11 @@ public:
     }
 
     ~DocAiS3Cam() override {
+        if (touch_menu_timer_ != nullptr) {
+            esp_timer_stop(touch_menu_timer_);
+            esp_timer_delete(touch_menu_timer_);
+            touch_menu_timer_ = nullptr;
+        }
         CloseCamera();
         if (servo_api_started_) {
             DocWebServoApiStop();

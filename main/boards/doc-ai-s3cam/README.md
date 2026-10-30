@@ -65,3 +65,17 @@ A pinagem ST7735 1,77" e OV3660 está registrada em `config.h`, mas inicializaç
 
 ## Compilação local
 No repositório local XiaoZhi/ESP-IDF, selecionar a placa `doc-ai-s3cam` e compilar conforme o fluxo de build do projeto. A compilação e o teste físico continuam pendentes.
+
+
+## TTP223 — gestos físicos no GPIO48
+
+- Sinal OUT do TTP223 ligado ao GPIO48; alimentação do módulo em 3V3 e GND comum.
+- Toque curto: alterna o estado de escuta.
+- Toque duplo: alterna as personalidades Neutro, Atento e Divertido.
+- Toque longo de 1,2 s: abre o menu; com o menu aberto, fecha/volta.
+- Durante a fala, qualquer toque solicita a interrupção da resposta sem alterar automaticamente a escuta.
+- No menu: toque curto avança; toque duplo executa; toque longo fecha. O menu fecha após 30 s sem interação.
+- Opções: aumentar/diminuir volume em passos de 5%; informar que o brilho está indisponível (DISPLAY_BACKLIGHT_PIN = GPIO_NUM_NC); mostrar indicador Wi-Fi; exibir estado do DOC.
+- GPIO48 pode estar ligado ao LED RGB integrado em algumas revisões da placa. Observar possíveis interferências no LED e no sensor.
+- A implementação está na branch `feature/ttp223-gpio48-functional`; `main` não foi alterada.
+- Esta revisão ainda precisa de compilação e teste físico antes de ser gravada na placa.

@@ -1,0 +1,79 @@
+PROJETO .DOC — TABELA DE COMANDOS DO SENSOR TTP223
+Versão: 1.1
+Data: 30/10/2026
+Hardware: ESP32-S3-CAM N16R8
+Sensor: TTP223
+GPIO OUT: GPIO48
+
+1. COMANDOS FORA DO MENU
+
+Estado do DOC | Gesto | Ação
+Repouso/interação normal | Toque curto | Alterna o estado de escuta usando Application::ToggleChatState().
+Repouso/interação normal | Toque duplo | Alterna as personalidades visuais: Neutro -> Atento -> Divertido -> Neutro.
+Repouso/interação normal | Toque longo (1,2 s) | Abre o menu no display ST7735.
+Durante resposta falada | Qualquer toque | Solicita interrupção imediata da fala com Application::AbortSpeaking(kAbortReasonNone). Não alterna automaticamente a escuta.
+
+2. NAVEGAÇÃO DO MENU ST7735
+
+Menu aberto | Toque curto | Avança para a próxima opção.
+Menu aberto | Toque duplo | Executa a opção selecionada e fecha o menu para exibir o resultado.
+Menu aberto | Toque longo (1,2 s) | Fecha o menu.
+Menu aberto | 30 s sem interação | Fecha automaticamente o menu.
+
+3. OPÇÕES DO MENU
+
+Opção | Ação | Limitação/observação
+Aumentar volume | Aumenta o volume de saída em 5 pontos, até 100%. | Usa AudioCodec::SetOutputVolume().
+Diminuir volume | Diminui o volume de saída em 5 pontos, até 0%. | Usa AudioCodec::SetOutputVolume().
+Brilho | Informa que o ajuste não está disponível. | DISPLAY_BACKLIGHT_PIN está configurado como GPIO_NUM_NC.
+Estado Wi-Fi | Exibe o indicador de estado de rede retornado pela placa. | Usa Board::GetNetworkStateIcon().
+Configurações DOC | Exibe o estado atual do DOC e lembretes dos gestos. | Tela informativa nesta versão.
+
+4. PERSONALIDADES VISUAIS
+
+Neutro | Expressão "neutral".
+Atento | Expressão "listening".
+Divertido | Expressão "happy".
+O toque duplo percorre as três expressões em ciclo.
+
+5. PRIORIDADE E REGRAS
+
+1. Durante a fala, a prioridade é interromper a resposta; o mesmo toque não deve executar outro comando.
+2. Com o menu aberto, os gestos são interpretados como navegação do menu.
+3. Fora do menu: curto alterna escuta; duplo troca personalidade; longo abre menu.
+4. Toque duplo não pode executar duas ações de toque curto.
+5. Toque longo não pode executar a ação de toque curto.
+6. O componente Button do projeto interpreta os eventos e faz o debounce/identificação de clique simples, duplo e longo.
+7. O tempo de toque longo está definido por DOC_TTP223_LONG_PRESS_MS em config.h (1200 ms).
+8. O menu fecha após 30 segundos sem interação.
+9. A interrupção da fala não reinicia o microfone nem altera por si só o estado da escuta.
+
+6. ARQUIVOS DE IMPLEMENTAÇÃO
+
+main/boards/doc-ai-s3cam/config.h
+- TOUCH_BUTTON_GPIO: GPIO48.
+- DOC_TTP223_LONG_PRESS_MS: 1200 ms.
+
+main/boards/doc-ai-s3cam/doc_ai_s3cam.cc
+- Seção "DOC TTP223 — MENU, PERSONALIDADES E AÇÕES DO SENSOR".
+- Handlers: HandleTouchShort(), HandleTouchDouble(), HandleTouchLong().
+- Menu: ShowTouchMenu(), SelectTouchMenuOption(), OpenTouchMenu(), CloseTouchMenu().
+- Timer de inatividade: TouchMenuTimeout().
+
+7. RESTRIÇÕES DE INTEGRAÇÃO
+
+- Manter o TTP223 em GPIO48.
+- Preservar a implementação funcional da câmera OV3660.
+- Preservar servos, PCA9685, pinagem e calibração existentes.
+- Não associar o sensor a movimentos dos servos nesta etapa.
+- O brilho não é ajustável até existir controle de backlight por GPIO/PWM.
+
+8. ESTADO DE VALIDAÇÃO
+
+- Detecção elétrica de toque/liberação no GPIO48: confirmada em teste anterior.
+- Código dos gestos e menu: commitado na branch feature/ttp223-gpio48-functional.
+- Compilação desta nova revisão: pendente.
+- Teste de hardware dos gestos e opções do menu: pendente.
+- Erro anterior de inicialização do PCA9685 (ESP_ERR_INVALID_RESPONSE) é um diagnóstico separado.
+
+FIM DO DOCUMENTO
