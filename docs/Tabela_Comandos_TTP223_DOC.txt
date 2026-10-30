@@ -1,68 +1,79 @@
 PROJETO .DOC — TABELA DE COMANDOS DO SENSOR TTP223
-Versão: 1.0
+Versão: 1.1
 Data: 30/10/2026
 Hardware: ESP32-S3-CAM N16R8
 Sensor: TTP223
-GPIO do sinal OUT: GPIO48
+GPIO OUT: GPIO48
 
-1. OBJETIVO
-Definir os gestos físicos do TTP223 e as ações correspondentes no DOC,
-assistente de IA de mesa.
+1. COMANDOS FORA DO MENU
 
-2. TABELA PRINCIPAL DE COMANDOS
 Estado do DOC | Gesto | Ação
-Repouso/interação normal | Toque curto | Alterna escuta ativada/desativada.
-Repouso/interação normal | Toque duplo | Alterna personalidade: Neutro -> Atento -> Divertido -> Neutro.
-Repouso/interação normal | Toque longo | Abre o menu de funções no ST7735.
-Durante resposta falada | Qualquer toque reconhecido | Interrompe a reprodução da fala sem alterar automaticamente o estado da escuta.
+Repouso/interação normal | Toque curto | Alterna o estado de escuta usando Application::ToggleChatState().
+Repouso/interação normal | Toque duplo | Alterna as personalidades visuais: Neutro -> Atento -> Divertido -> Neutro.
+Repouso/interação normal | Toque longo (1,2 s) | Abre o menu no display ST7735.
+Durante resposta falada | Qualquer toque | Solicita interrupção imediata da fala com Application::AbortSpeaking(kAbortReasonNone). Não alterna automaticamente a escuta.
 
-3. NAVEGAÇÃO DO MENU ST7735
-Menu aberto | Toque curto | Move o destaque para a próxima opção.
-Menu aberto | Toque duplo | Seleciona/confirma a opção destacada.
-Menu aberto | Toque longo | Volta à tela anterior ou fecha o menu.
+2. NAVEGAÇÃO DO MENU ST7735
 
-4. OPÇÕES PREVISTAS NO MENU
-Volume | Consultar e ajustar o volume do MAX98357A.
-Brilho | Consultar e ajustar o brilho do ST7735, se o circuito/backlight permitir controle por software.
-Conexão | Exibir o estado da conexão Wi-Fi.
-Configurações | Abrir opções de configuração do DOC.
+Menu aberto | Toque curto | Avança para a próxima opção.
+Menu aberto | Toque duplo | Executa a opção selecionada e fecha o menu para exibir o resultado.
+Menu aberto | Toque longo (1,2 s) | Fecha o menu.
+Menu aberto | 30 s sem interação | Fecha automaticamente o menu.
 
-5. PERSONALIDADES VISUAIS
-Neutro | Expressão padrão/repouso.
-Atento | Expressão de atenção/escuta.
-Divertido | Expressão descontraída.
-Ciclo do toque duplo: Neutro -> Atento -> Divertido -> Neutro.
+3. OPÇÕES DO MENU
 
-6. REGRAS DE PRIORIDADE
-1. Durante a reprodução de fala, qualquer toque deve priorizar a interrupção.
+Opção | Ação | Limitação/observação
+Aumentar volume | Aumenta o volume de saída em 5 pontos, até 100%. | Usa AudioCodec::SetOutputVolume().
+Diminuir volume | Diminui o volume de saída em 5 pontos, até 0%. | Usa AudioCodec::SetOutputVolume().
+Brilho | Informa que o ajuste não está disponível. | DISPLAY_BACKLIGHT_PIN está configurado como GPIO_NUM_NC.
+Estado Wi-Fi | Exibe o indicador de estado de rede retornado pela placa. | Usa Board::GetNetworkStateIcon().
+Configurações DOC | Exibe o estado atual do DOC e lembretes dos gestos. | Tela informativa nesta versão.
+
+4. PERSONALIDADES VISUAIS
+
+Neutro | Expressão "neutral".
+Atento | Expressão "listening".
+Divertido | Expressão "happy".
+O toque duplo percorre as três expressões em ciclo.
+
+5. PRIORIDADE E REGRAS
+
+1. Durante a fala, a prioridade é interromper a resposta; o mesmo toque não deve executar outro comando.
 2. Com o menu aberto, os gestos são interpretados como navegação do menu.
-3. Fora do menu e sem fala em reprodução: curto alterna escuta; duplo troca personalidade; longo abre menu.
-4. Toque duplo não pode executar também duas ações de toque curto.
-5. Toque longo não pode executar também a ação de toque curto.
-6. Implementar debounce e temporização configurável para distinguir gestos.
-7. Os tempos devem ficar em constantes identificadas e comentadas no código.
-8. A interrupção atua sobre a fala em andamento; não reinicia o microfone nem muda o estado da escuta.
+3. Fora do menu: curto alterna escuta; duplo troca personalidade; longo abre menu.
+4. Toque duplo não pode executar duas ações de toque curto.
+5. Toque longo não pode executar a ação de toque curto.
+6. O componente Button do projeto interpreta os eventos e faz o debounce/identificação de clique simples, duplo e longo.
+7. O tempo de toque longo está definido por DOC_TTP223_LONG_PRESS_MS em config.h (1200 ms).
+8. O menu fecha após 30 segundos sem interação.
+9. A interrupção da fala não reinicia o microfone nem altera por si só o estado da escuta.
 
-7. FEEDBACK VISUAL
-Escuta ativada/desativada: indicar claramente o estado.
-Menu aberto: mostrar a opção selecionada no ST7735.
-Personalidade alterada: atualizar a expressão visual.
-Fala interrompida: indicar que a reprodução foi interrompida.
+6. ARQUIVOS DE IMPLEMENTAÇÃO
 
-8. RESTRIÇÕES DE INTEGRAÇÃO
-- Manter TTP223 em GPIO48.
+main/boards/doc-ai-s3cam/config.h
+- TOUCH_BUTTON_GPIO: GPIO48.
+- DOC_TTP223_LONG_PRESS_MS: 1200 ms.
+
+main/boards/doc-ai-s3cam/doc_ai_s3cam.cc
+- Seção "DOC TTP223 — MENU, PERSONALIDADES E AÇÕES DO SENSOR".
+- Handlers: HandleTouchShort(), HandleTouchDouble(), HandleTouchLong().
+- Menu: ShowTouchMenu(), SelectTouchMenuOption(), OpenTouchMenu(), CloseTouchMenu().
+- Timer de inatividade: TouchMenuTimeout().
+
+7. RESTRIÇÕES DE INTEGRAÇÃO
+
+- Manter o TTP223 em GPIO48.
 - Preservar a implementação funcional da câmera OV3660.
-- Preservar servos e PCA9685.
-- Não alterar a pinagem validada sem autorização.
-- Não associar o TTP223 a movimentos dos servos nesta etapa.
-- Separar interpretação de gestos das ações executadas.
+- Preservar servos, PCA9685, pinagem e calibração existentes.
+- Não associar o sensor a movimentos dos servos nesta etapa.
+- O brilho não é ajustável até existir controle de backlight por GPIO/PWM.
 
-9. ESTADO DE VALIDAÇÃO
-- Compilação da branch de integração: concluída com sucesso antes desta etapa.
-- Gravação do firmware anterior: realizada pelo usuário.
-- Detecção de toque e liberação no GPIO48: confirmada nos logs.
-- Gestos e ações deste documento: ainda precisam ser implementados e testados.
-- Foi observado separadamente erro de inicialização do PCA9685 (ESP_ERR_INVALID_RESPONSE).
-  Esse diagnóstico não faz parte da validação do TTP223.
+8. ESTADO DE VALIDAÇÃO
+
+- Detecção elétrica de toque/liberação no GPIO48: confirmada em teste anterior.
+- Código dos gestos e menu: commitado na branch feature/ttp223-gpio48-functional.
+- Compilação desta nova revisão: pendente.
+- Teste de hardware dos gestos e opções do menu: pendente.
+- Erro anterior de inicialização do PCA9685 (ESP_ERR_INVALID_RESPONSE) é um diagnóstico separado.
 
 FIM DO DOCUMENTO
