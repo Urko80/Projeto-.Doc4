@@ -322,7 +322,7 @@ private:
 
     // Toque longo: abre o menu ou volta/fecha o menu atual.
     void HandleTouchLong() {
-        if (touch_menu_open_) {
+        if (touch_menu_open_.load()) {
             CloseTouchMenu();
         } else {
             OpenTouchMenu();
