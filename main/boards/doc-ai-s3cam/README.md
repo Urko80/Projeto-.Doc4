@@ -65,3 +65,14 @@ A pinagem ST7735 1,77" e OV3660 está registrada em `config.h`, mas inicializaç
 
 ## Compilação local
 No repositório local XiaoZhi/ESP-IDF, selecionar a placa `doc-ai-s3cam` e compilar conforme o fluxo de build do projeto. A compilação e o teste físico continuam pendentes.
+
+
+## TTP223 — teste isolado no GPIO48
+
+- Sinal OUT do TTP223 ligado ao GPIO48.
+- Alimentação recomendada para este teste: 3V3 e GND comum com a ESP32-S3.
+- O firmware registra no log serial os eventos de início e fim do toque.
+- O teste não altera o estado do chat e não comanda os servos.
+- GPIO48 pode estar ligado ao LED RGB integrado em algumas revisões da placa. Observar possíveis interferências no LED e no sensor.
+- Esta alteração está somente na branch `feature/ttp223-gpio48-functional`; não foi aplicada à `main`.
+- A compilação e o teste físico ainda estão pendentes. Não gravar na placa antes da revisão e do build.
