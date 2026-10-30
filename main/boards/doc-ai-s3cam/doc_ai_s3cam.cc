@@ -19,6 +19,7 @@
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
+#include <esp_timer.h>
 #include <esp_log.h>
 #include "esp_lcd_st7735.h"
 
@@ -306,7 +307,7 @@ private:
 
     // Toque duplo: seleciona no menu ou troca a personalidade fora dele.
     void HandleTouchDouble() {
-        if (touch_menu_open_) {
+        if (touch_menu_open_.load()) {
             SelectTouchMenuOption();
             // A opção selecionada apresenta o resultado por alguns segundos.
             // O menu fecha após a seleção para não sobrescrever essa confirmação.
