@@ -23,6 +23,10 @@
 class DocAiS3Cam : public WifiBoard {
 private:
     Button boot_button_;
+
+    // TTP223: entrada digital ativa em nível alto durante o toque.
+    // Se o sensor não responder, revisar o nível lógico e a ligação OUT/GND/3V3.
+    Button touch_button_;
     Display* display_ = nullptr;
     bool servo_api_started_ = false;
 
@@ -114,6 +118,7 @@ private:
     // DOC FIM — Estado e ciclo de vida da câmera.
 
     void InitializeButtons() {
+        // Botão BOOT original: comportamento preservado.
         boot_button_.OnClick([this]() {
             auto& app = Application::GetInstance();
             if (app.GetDeviceState() == kDeviceStateStarting) {
@@ -121,6 +126,15 @@ private:
                 return;
             }
             app.ToggleChatState();
+        });
+
+        // TTP223: registra início e fim do toque no log serial.
+        // Este primeiro teste não altera o estado do chat nem aciona os servos.
+        touch_button_.OnPressDown([this]() {
+            ESP_LOGI(TAG, "TTP223: toque detectado (GPIO48 em nível alto)");
+        });
+        touch_button_.OnPressUp([this]() {
+            ESP_LOGI(TAG, "TTP223: toque encerrado (GPIO48 em nível baixo)");
         });
     }
 
@@ -213,7 +227,9 @@ public:
     }
     // DOC FIM
 
-    DocAiS3Cam() : boot_button_(BOOT_BUTTON_GPIO) {
+    DocAiS3Cam()
+        : boot_button_(BOOT_BUTTON_GPIO),
+          touch_button_(TOUCH_BUTTON_GPIO, true) {
         ESP_LOGI(TAG, "DOC AI S3CAM board startup");
         InitializeButtons();
         InitializeDisplay();
