@@ -284,7 +284,9 @@ private:
     void HandleTouchDouble() {
         if (touch_menu_open_) {
             SelectTouchMenuOption();
-            ShowTouchMenu();
+            // A opção selecionada apresenta o resultado por alguns segundos.
+            // O menu fecha após a seleção para não sobrescrever essa confirmação.
+            touch_menu_open_ = false;
             return;
         }
         CycleTouchPersonality();
