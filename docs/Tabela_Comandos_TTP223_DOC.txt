@@ -1,0 +1,68 @@
+PROJETO .DOC — TABELA DE COMANDOS DO SENSOR TTP223
+Versão: 1.0
+Data: 30/10/2026
+Hardware: ESP32-S3-CAM N16R8
+Sensor: TTP223
+GPIO do sinal OUT: GPIO48
+
+1. OBJETIVO
+Definir os gestos físicos do TTP223 e as ações correspondentes no DOC,
+assistente de IA de mesa.
+
+2. TABELA PRINCIPAL DE COMANDOS
+Estado do DOC | Gesto | Ação
+Repouso/interação normal | Toque curto | Alterna escuta ativada/desativada.
+Repouso/interação normal | Toque duplo | Alterna personalidade: Neutro -> Atento -> Divertido -> Neutro.
+Repouso/interação normal | Toque longo | Abre o menu de funções no ST7735.
+Durante resposta falada | Qualquer toque reconhecido | Interrompe a reprodução da fala sem alterar automaticamente o estado da escuta.
+
+3. NAVEGAÇÃO DO MENU ST7735
+Menu aberto | Toque curto | Move o destaque para a próxima opção.
+Menu aberto | Toque duplo | Seleciona/confirma a opção destacada.
+Menu aberto | Toque longo | Volta à tela anterior ou fecha o menu.
+
+4. OPÇÕES PREVISTAS NO MENU
+Volume | Consultar e ajustar o volume do MAX98357A.
+Brilho | Consultar e ajustar o brilho do ST7735, se o circuito/backlight permitir controle por software.
+Conexão | Exibir o estado da conexão Wi-Fi.
+Configurações | Abrir opções de configuração do DOC.
+
+5. PERSONALIDADES VISUAIS
+Neutro | Expressão padrão/repouso.
+Atento | Expressão de atenção/escuta.
+Divertido | Expressão descontraída.
+Ciclo do toque duplo: Neutro -> Atento -> Divertido -> Neutro.
+
+6. REGRAS DE PRIORIDADE
+1. Durante a reprodução de fala, qualquer toque deve priorizar a interrupção.
+2. Com o menu aberto, os gestos são interpretados como navegação do menu.
+3. Fora do menu e sem fala em reprodução: curto alterna escuta; duplo troca personalidade; longo abre menu.
+4. Toque duplo não pode executar também duas ações de toque curto.
+5. Toque longo não pode executar também a ação de toque curto.
+6. Implementar debounce e temporização configurável para distinguir gestos.
+7. Os tempos devem ficar em constantes identificadas e comentadas no código.
+8. A interrupção atua sobre a fala em andamento; não reinicia o microfone nem muda o estado da escuta.
+
+7. FEEDBACK VISUAL
+Escuta ativada/desativada: indicar claramente o estado.
+Menu aberto: mostrar a opção selecionada no ST7735.
+Personalidade alterada: atualizar a expressão visual.
+Fala interrompida: indicar que a reprodução foi interrompida.
+
+8. RESTRIÇÕES DE INTEGRAÇÃO
+- Manter TTP223 em GPIO48.
+- Preservar a implementação funcional da câmera OV3660.
+- Preservar servos e PCA9685.
+- Não alterar a pinagem validada sem autorização.
+- Não associar o TTP223 a movimentos dos servos nesta etapa.
+- Separar interpretação de gestos das ações executadas.
+
+9. ESTADO DE VALIDAÇÃO
+- Compilação da branch de integração: concluída com sucesso antes desta etapa.
+- Gravação do firmware anterior: realizada pelo usuário.
+- Detecção de toque e liberação no GPIO48: confirmada nos logs.
+- Gestos e ações deste documento: ainda precisam ser implementados e testados.
+- Foi observado separadamente erro de inicialização do PCA9685 (ESP_ERR_INVALID_RESPONSE).
+  Esse diagnóstico não faz parte da validação do TTP223.
+
+FIM DO DOCUMENTO
