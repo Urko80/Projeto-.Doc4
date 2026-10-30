@@ -22,7 +22,9 @@
 #define AUDIO_I2S_SPK_GPIO_DOUT GPIO_NUM_47
 
 #define BOOT_BUTTON_GPIO        GPIO_NUM_0
-#define TOUCH_BUTTON_GPIO       GPIO_NUM_NC
+// TTP223: saida digital ativa em nivel alto quando detecta toque.
+// GPIO48 fica reservado ao sensor nesta branch de teste.
+#define TOUCH_BUTTON_GPIO       GPIO_NUM_48
 #define ASR_BUTTON_GPIO         GPIO_NUM_NC
 #define VOLUME_UP_BUTTON_GPIO   GPIO_NUM_NC
 #define VOLUME_DOWN_BUTTON_GPIO GPIO_NUM_NC
