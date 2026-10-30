@@ -24,6 +24,8 @@
  // GPIO48 pode estar ligado ao LED RGB integrado em algumas revisões da placa.
  // Confirmar o comportamento físico antes de considerar este pino definitivamente livre.
 #define TOUCH_BUTTON_GPIO       GPIO_NUM_48
+// Tempo pressionado para reconhecer toque longo e abrir/fechar o menu (ms).
+#define DOC_TTP223_LONG_PRESS_MS 1200
 #define ASR_BUTTON_GPIO         GPIO_NUM_NC
 #define VOLUME_UP_BUTTON_GPIO   GPIO_NUM_NC
 #define VOLUME_DOWN_BUTTON_GPIO GPIO_NUM_NC
