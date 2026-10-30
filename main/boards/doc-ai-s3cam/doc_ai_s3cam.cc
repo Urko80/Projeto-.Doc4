@@ -18,6 +18,8 @@
 class DocAiS3Cam : public WifiBoard {
 private:
     Button boot_button_;
+    // TTP223 em GPIO48: active_high=true porque OUT vai a HIGH no toque.
+    Button touch_button_;
     Display* display_ = nullptr;
 
     void InitializeButtons() {
@@ -28,6 +30,16 @@ private:
                 return;
             }
             app.ToggleChatState();
+        });
+    }
+
+    // Registra eventos do TTP223 sem alterar o comportamento do botao BOOT.
+    void InitializeTouchSensor() {
+        touch_button_.OnPressDown([]() {
+            ESP_LOGI(TAG, "TTP223: toque detectado no GPIO48");
+        });
+        touch_button_.OnPressUp([]() {
+            ESP_LOGI(TAG, "TTP223: toque encerrado no GPIO48");
         });
     }
 
@@ -91,9 +103,12 @@ private:
     }
 
 public:
-    DocAiS3Cam() : boot_button_(BOOT_BUTTON_GPIO) {
+    DocAiS3Cam()
+        : boot_button_(BOOT_BUTTON_GPIO),
+          touch_button_(TOUCH_BUTTON_GPIO, true) {
         ESP_LOGI(TAG, "DOC AI S3CAM board startup");
         InitializeButtons();
+        InitializeTouchSensor();
         InitializeDisplay();
 
         ESP_LOGI(TAG,
