@@ -34,7 +34,8 @@ private:
 
     // DOC TTP223: estado do interpretador de gestos e do menu físico.
     std::atomic<bool> touch_interrupted_speech_{false};
-    bool touch_menu_open_ = false;
+    std::atomic<bool> touch_menu_open_{false};
+    esp_timer_handle_t touch_menu_timer_ = nullptr;
     int touch_menu_index_ = 0;
     int touch_personality_index_ = 0;
 
@@ -154,14 +155,36 @@ private:
                  menu_items[touch_menu_index_], touch_menu_index_ + 1, menu_count);
     }
 
+    // Fecha automaticamente o menu após 30 s sem interação.
+    static void TouchMenuTimeout(void* arg) {
+        auto* self = static_cast<DocAiS3Cam*>(arg);
+        if (self->touch_menu_open_.exchange(false)) {
+            if (self->display_ != nullptr) {
+                self->display_->SetStatus("DOC");
+            }
+            ESP_LOGI(TAG, "TTP223 menu fechado por inatividade");
+        }
+    }
+
+    void RestartTouchMenuTimer() {
+        if (touch_menu_timer_ != nullptr) {
+            esp_timer_stop(touch_menu_timer_);
+            ESP_ERROR_CHECK(esp_timer_start_once(touch_menu_timer_, 30000000));
+        }
+    }
+
     void OpenTouchMenu() {
-        touch_menu_open_ = true;
+        touch_menu_open_.store(true);
         touch_menu_index_ = 0;
         ShowTouchMenu();
+        RestartTouchMenuTimer();
     }
 
     void CloseTouchMenu() {
-        touch_menu_open_ = false;
+        touch_menu_open_.store(false);
+        if (touch_menu_timer_ != nullptr) {
+            esp_timer_stop(touch_menu_timer_);
+        }
         if (display_ != nullptr) {
             display_->SetStatus("DOC");
         }
@@ -172,6 +195,7 @@ private:
         constexpr int menu_count = 5;
         touch_menu_index_ = (touch_menu_index_ + 1) % menu_count;
         ShowTouchMenu();
+        RestartTouchMenuTimer();
     }
 
     // Consulta o estado atual da aplicação para apresentar no menu.
@@ -263,7 +287,7 @@ private:
 
     // Toque curto: alterna o estado de escuta; no menu, avança a seleção.
     void HandleTouchShort() {
-        if (touch_menu_open_) {
+        if (touch_menu_open_.load()) {
             MoveTouchMenuNext();
             return;
         }
@@ -286,7 +310,10 @@ private:
             SelectTouchMenuOption();
             // A opção selecionada apresenta o resultado por alguns segundos.
             // O menu fecha após a seleção para não sobrescrever essa confirmação.
-            touch_menu_open_ = false;
+            touch_menu_open_.store(false);
+            if (touch_menu_timer_ != nullptr) {
+                esp_timer_stop(touch_menu_timer_);
+            }
             return;
         }
         CycleTouchPersonality();
@@ -441,10 +468,20 @@ public:
 
     DocAiS3Cam()
         : boot_button_(BOOT_BUTTON_GPIO),
-          touch_button_(TOUCH_BUTTON_GPIO, true, 1200, 0) {
+          touch_button_(TOUCH_BUTTON_GPIO, true, DOC_TTP223_LONG_PRESS_MS, 0) {
         ESP_LOGI(TAG, "DOC AI S3CAM board startup");
         InitializeButtons();
         InitializeDisplay();
+
+        // Timer de inatividade do menu físico do TTP223.
+        esp_timer_create_args_t touch_menu_timer_args = {
+            .callback = TouchMenuTimeout,
+            .arg = this,
+            .dispatch_method = ESP_TIMER_TASK,
+            .name = "doc_touch_menu",
+            .skip_unhandled_events = true,
+        };
+        ESP_ERROR_CHECK(esp_timer_create(&touch_menu_timer_args, &touch_menu_timer_));
 
         // A Application registra seu callback durante Initialize().
         // O encadeamento do callback é implementado em SetNetworkEventCallback().
@@ -458,6 +495,11 @@ public:
     }
 
     ~DocAiS3Cam() override {
+        if (touch_menu_timer_ != nullptr) {
+            esp_timer_stop(touch_menu_timer_);
+            esp_timer_delete(touch_menu_timer_);
+            touch_menu_timer_ = nullptr;
+        }
         CloseCamera();
         if (servo_api_started_) {
             DocWebServoApiStop();
