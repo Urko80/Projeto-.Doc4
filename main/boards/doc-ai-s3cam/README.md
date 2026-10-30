@@ -37,3 +37,10 @@ python scripts/build.py doc-ai-s3cam --name doc-ai-s3cam
 
 This package has not been compiled against the user's local checkout. A successful
 build and physical audio/network test are still required.
+
+
+## TTP223 test branch
+- The TTP223 digital OUT is assigned to GPIO48 in `config.h`.
+- GPIO48 is configured as an active-high button; touch press/release are logged.
+- This is an isolated test on branch `feature/ttp223-gpio48`; it does not change `main` or PR #13.
+- Physical validation is required because some ESP32-S3-CAM revisions connect GPIO48 to an onboard RGB LED.
