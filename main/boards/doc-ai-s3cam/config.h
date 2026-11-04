@@ -24,20 +24,22 @@
 #define VOLUME_DOWN_BUTTON_GPIO GPIO_NUM_NC
 #define BUILTIN_LED_GPIO        GPIO_NUM_NC
 
-// ST7735 1.77" GMT177-10, BLACKTAB. User-verified landscape orientation.
+// ST7735 1.77" GMT177-10 BLACKTAB.
+// Native portrait orientation: 128 pixels wide by 160 pixels high.
+// Keep all rotation/mirroring transforms disabled for readable, non-mirrored text.
 #define DISPLAY_SPI_CLK_PIN    GPIO_NUM_14
 #define DISPLAY_SPI_MOSI_PIN   GPIO_NUM_21
 #define DISPLAY_CS_PIN         GPIO_NUM_38
 #define DISPLAY_DC_PIN         GPIO_NUM_39
 #define DISPLAY_RST_PIN        GPIO_NUM_40
 #define DISPLAY_BACKLIGHT_PIN  GPIO_NUM_NC
-#define DISPLAY_WIDTH          160
-#define DISPLAY_HEIGHT         128
+#define DISPLAY_WIDTH          128
+#define DISPLAY_HEIGHT         160
 #define DISPLAY_OFFSET_X       0
 #define DISPLAY_OFFSET_Y       0
 #define DISPLAY_MIRROR_X       false
 #define DISPLAY_MIRROR_Y       false
-#define DISPLAY_SWAP_XY        true
+#define DISPLAY_SWAP_XY        false
 #define DISPLAY_INVERT_COLOR   false
 #define DISPLAY_SPI_MODE       0
 #define DISPLAY_SPI_CLOCK_HZ   (27 * 1000 * 1000)
