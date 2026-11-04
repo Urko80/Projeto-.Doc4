@@ -236,7 +236,7 @@ static esp_err_t DistanceHandler(httpd_req_t* req) {
     return ESP_OK;
 }
 
-static void SendJson(httpd_req_t* req, const char* json, const char* status = "200 OK") {
+static void SendJson(httpd_req_t* req, const char* json, const char* status) {
     httpd_resp_set_status(req, status);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
