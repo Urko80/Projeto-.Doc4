@@ -164,7 +164,8 @@ private:
     }
 
     void InitializeI2cAndSensors() {
-        // Shared I2C bus for PCA9685 (0x40) and VL53L0X (0x29).
+        // Shared external I2C0 bus for PCA9685 (0x40) and VL53L0X (0x29).
+        // The esp32-camera component defaults its separate SCCB bus to I2C1.
         i2c_master_bus_config_t bus_config = {};
         bus_config.i2c_port = I2C_NUM_0; // External sensors use I2C0; esp32-camera defaults SCCB to I2C1.
         bus_config.sda_io_num = DOC_I2C_SDA_GPIO;
@@ -200,7 +201,8 @@ private:
     }
 
     void InitializeCamera() {
-        // OV3660 SCCB is separate from the external GPIO 19/20 I2C bus.
+        // OV3660 SCCB uses GPIO 4/5 and the camera component's separate I2C1 bus.
+        // External sensors remain on I2C0 (GPIO 19/20).
         camera_config_t config = {};
         config.pin_pwdn = CAMERA_PIN_PWDN;
         config.pin_reset = CAMERA_PIN_RESET;
