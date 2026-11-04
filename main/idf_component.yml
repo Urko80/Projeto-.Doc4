@@ -163,3 +163,5 @@ dependencies:
 
   cube32esp/xpowerslib: ^0.3.3
   waveshare/esp_lcd_st7735: ^2.0.0
+  # Driver ToF VL53L0X (I2C master compartilhado, ESP-IDF 6.x).
+  pkolt/vl53l0x: ^1.0.0

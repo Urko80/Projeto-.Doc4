@@ -51,6 +51,9 @@ extern const uint8_t _binary_web_control_html_end[];
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 
+// Driver VL53L0X: utiliza o barramento I2C master já criado para o PCA9685.
+#include <vl53l0x.h>
+
 namespace {
 
 static const char* TAG = "doc_web_servo_api";
@@ -80,6 +83,8 @@ constexpr uint8_t MODE1_SLEEP = 0x10;
 
 static i2c_master_bus_handle_t s_i2c_bus = nullptr;
 static i2c_master_dev_handle_t s_pca = nullptr;
+// Handle do VL53L0X; compartilha s_i2c_bus e não cria outro controlador I2C.
+static vl53l0x_handle_t s_vl53 = nullptr;
 static httpd_handle_t s_http = nullptr;
 static SemaphoreHandle_t s_mutex = nullptr;
 static TaskHandle_t s_watchdog_task = nullptr;
@@ -169,7 +174,69 @@ static esp_err_t PcaInitialize() {
     return ESP_OK;
 }
 
-static void SendJson(httpd_req_t* req, const char* json, const char* status = "200 OK") {
+static void SendJson(httpd_req_t* req, const char* json, const char* status = "200 OK");
+
+// Inicializa o VL53L0X no mesmo barramento I2C do PCA9685.
+// Falha do sensor não impede a API dos servos de continuar funcionando.
+static esp_err_t Vl53Initialize() {
+    if (s_i2c_bus == nullptr) return ESP_ERR_INVALID_STATE;
+
+    esp_err_t err = vl53l0x_create(&s_vl53, s_i2c_bus);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "VL53L0X 0x29: falha ao criar driver: %s", esp_err_to_name(err));
+        s_vl53 = nullptr;
+        return err;
+    }
+
+    err = vl53l0x_init(s_vl53);
+    if (err == ESP_OK) {
+        // Calibração de referência recomendada pelo driver antes das medições.
+        vl53l0x_ref_calibration_t calibration = {};
+        err = vl53l0x_perform_ref_calibration(s_vl53, &calibration);
+    }
+    if (err == ESP_OK) {
+        err = vl53l0x_set_profile(s_vl53, VL53L0X_PROFILE_DEFAULT);
+    }
+
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "VL53L0X: inicialização/calibração falhou: %s", esp_err_to_name(err));
+        vl53l0x_destroy(s_vl53);
+        s_vl53 = nullptr;
+        return err;
+    }
+
+    ESP_LOGI(TAG, "VL53L0X inicializado no I2C compartilhado: SDA=%d SCL=%d endereco=0x29",
+             static_cast<int>(PCA_SDA_GPIO), static_cast<int>(PCA_SCL_GPIO));
+    return ESP_OK;
+}
+
+// GET /api/distance executa uma medição sob demanda e retorna a distância em mm.
+static esp_err_t DistanceHandler(httpd_req_t* req) {
+    if (s_vl53 == nullptr) {
+        SendJson(req, "{\\"ok\\":false,\\"sensor\\":\\"VL53L0X\\",\\"error\\":\\"not_initialized\\"}",
+                 "503 Service Unavailable");
+        return ESP_OK;
+    }
+
+    vl53l0x_data_t data = {};
+    const esp_err_t err = vl53l0x_single_measure(s_vl53, &data);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "VL53L0X: falha na medição: %s", esp_err_to_name(err));
+        SendJson(req, "{\\"ok\\":false,\\"sensor\\":\\"VL53L0X\\",\\"error\\":\\"measurement_failed\\"}",
+                 "500 Internal Server Error");
+        return ESP_OK;
+    }
+
+    char json[192];
+    snprintf(json, sizeof(json),
+        "{\\"ok\\":true,\\"sensor\\":\\"VL53L0X\\",\\"distance_mm\\":%u,\\"valid\\":%s,\\"range_status\\":%u}",
+        static_cast<unsigned>(data.distance_mm), data.valid ? "true" : "false",
+        static_cast<unsigned>(data.range_status));
+    SendJson(req, json);
+    return ESP_OK;
+}
+
+static void SendJson(httpd_req_t* req, const char* json, const char* status) {
     httpd_resp_set_status(req, status);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
@@ -337,6 +404,12 @@ static esp_err_t StopHandler(httpd_req_t* req) {
         return ESP_OK;
     }
     esp_err_t err = StopWheelsLocked();
+    // O sensor é opcional: sua ausência não derruba o PCA9685 nem os servos.
+    const esp_err_t vl53_err = Vl53Initialize();
+    if (vl53_err != ESP_OK) {
+        ESP_LOGW(TAG, "API de servos seguirá ativa sem o VL53L0X");
+    }
+
     s_last_wheel_command = xTaskGetTickCount();
     xSemaphoreGive(s_mutex);
     if (err != ESP_OK) SendJson(req, "{\"ok\":false,\"error\":\"pca_write_failed\"}", "500 Internal Server Error");
@@ -450,7 +523,7 @@ extern "C" void DocWebServoApiStart(void) {
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.server_port = 80;
-    config.max_uri_handlers = 12;
+    config.max_uri_handlers = 14;
     config.lru_purge_enable = true;
     err = httpd_start(&s_http, &config);
     if (err != ESP_OK) {
@@ -464,11 +537,13 @@ extern "C" void DocWebServoApiStart(void) {
     // DOC FIM — página inicial
 
     RegisterUri(s_http, "/api/status", HTTP_GET, StatusHandler);
+    RegisterUri(s_http, "/api/distance", HTTP_GET, DistanceHandler);
     RegisterUri(s_http, "/api/servo", HTTP_POST, ServoHandler);
     RegisterUri(s_http, "/api/legs", HTTP_POST, LegsHandler);
     RegisterUri(s_http, "/api/wheels", HTTP_POST, WheelsHandler);
     RegisterUri(s_http, "/api/stop", HTTP_POST, StopHandler);
     RegisterUri(s_http, "/api/status", HTTP_OPTIONS, OptionsHandler);
+    RegisterUri(s_http, "/api/distance", HTTP_OPTIONS, OptionsHandler);
     RegisterUri(s_http, "/api/servo", HTTP_OPTIONS, OptionsHandler);
     RegisterUri(s_http, "/api/legs", HTTP_OPTIONS, OptionsHandler);
     RegisterUri(s_http, "/api/wheels", HTTP_OPTIONS, OptionsHandler);
@@ -494,6 +569,11 @@ extern "C" void DocWebServoApiStop(void) {
     if (s_watchdog_task != nullptr) {
         vTaskDelete(s_watchdog_task);
         s_watchdog_task = nullptr;
+    }
+    // Destrói o dispositivo VL53L0X antes de liberar o barramento compartilhado.
+    if (s_vl53 != nullptr) {
+        vl53l0x_destroy(s_vl53);
+        s_vl53 = nullptr;
     }
     if (s_pca != nullptr && s_i2c_bus != nullptr) {
         i2c_master_bus_rm_device(s_pca);
