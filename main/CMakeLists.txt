@@ -1147,6 +1147,7 @@ idf_component_register(SRCS ${SOURCES}
                         esp_driver_uart
                         esp_driver_spi
                         esp_driver_i2c
+                        pkolt__vl53l0x
                         esp_http_server
                         esp_driver_i2s
                         esp_driver_ledc
