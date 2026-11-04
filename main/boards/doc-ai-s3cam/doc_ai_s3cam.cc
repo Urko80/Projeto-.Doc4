@@ -166,7 +166,7 @@ private:
     void InitializeI2cAndSensors() {
         // Shared I2C bus for PCA9685 (0x40) and VL53L0X (0x29).
         i2c_master_bus_config_t bus_config = {};
-        bus_config.i2c_port = I2C_NUM_1; // Reserve I2C_NUM_0 for the camera's legacy SCCB driver.
+        bus_config.i2c_port = I2C_NUM_0; // External sensors use I2C0; esp32-camera defaults SCCB to I2C1.
         bus_config.sda_io_num = DOC_I2C_SDA_GPIO;
         bus_config.scl_io_num = DOC_I2C_SCL_GPIO;
         bus_config.clk_source = I2C_CLK_SRC_DEFAULT;
@@ -227,7 +227,7 @@ private:
         config.fb_count = 1;
         config.fb_location = CAMERA_FB_IN_PSRAM;
         config.grab_mode = CAMERA_GRAB_LATEST;
-        config.sccb_i2c_port = 0; // Used only if SCCB pins are set to -1; GPIO 4/5 are supplied above.
+        config.sccb_i2c_port = 1; // Fallback port; with GPIO 4/5 set, esp32-camera creates its SCCB bus on I2C1 by default.
         config.jpeg_buffer_size = 0;
 
         camera_ = new Esp32Camera(config);
