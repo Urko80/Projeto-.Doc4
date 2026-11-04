@@ -1,0 +1,2 @@
+Temporary CI trigger branch for validating feature/doc-ai-s3cam-full-hardware.
+This file is not part of the pull request.
