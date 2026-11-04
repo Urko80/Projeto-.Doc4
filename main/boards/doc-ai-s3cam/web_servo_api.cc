@@ -174,6 +174,8 @@ static esp_err_t PcaInitialize() {
     return ESP_OK;
 }
 
+static void SendJson(httpd_req_t* req, const char* json, const char* status = "200 OK");
+
 // Inicializa o VL53L0X no mesmo barramento I2C do PCA9685.
 // Falha do sensor não impede a API dos servos de continuar funcionando.
 static esp_err_t Vl53Initialize() {
@@ -211,7 +213,7 @@ static esp_err_t Vl53Initialize() {
 // GET /api/distance executa uma medição sob demanda e retorna a distância em mm.
 static esp_err_t DistanceHandler(httpd_req_t* req) {
     if (s_vl53 == nullptr) {
-        SendJson(req, "{\\\"ok\\\":false,\\\"sensor\\\":\\\"VL53L0X\\\",\\\"error\\\":\\\"not_initialized\\\"}",
+        SendJson(req, "{\\"ok\\":false,\\"sensor\\":\\"VL53L0X\\",\\"error\\":\\"not_initialized\\"}",
                  "503 Service Unavailable");
         return ESP_OK;
     }
@@ -220,14 +222,14 @@ static esp_err_t DistanceHandler(httpd_req_t* req) {
     const esp_err_t err = vl53l0x_single_measure(s_vl53, &data);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "VL53L0X: falha na medição: %s", esp_err_to_name(err));
-        SendJson(req, "{\\\"ok\\\":false,\\\"sensor\\\":\\\"VL53L0X\\\",\\\"error\\\":\\\"measurement_failed\\\"}",
+        SendJson(req, "{\\"ok\\":false,\\"sensor\\":\\"VL53L0X\\",\\"error\\":\\"measurement_failed\\"}",
                  "500 Internal Server Error");
         return ESP_OK;
     }
 
     char json[192];
     snprintf(json, sizeof(json),
-        "{\\\"ok\\\":true,\\\"sensor\\\":\\\"VL53L0X\\\",\\\"distance_mm\\\":%u,\\\"valid\\\":%s,\\\"range_status\\\":%u}",
+        "{\\"ok\\":true,\\"sensor\\":\\"VL53L0X\\",\\"distance_mm\\":%u,\\"valid\\":%s,\\"range_status\\":%u}",
         static_cast<unsigned>(data.distance_mm), data.valid ? "true" : "false",
         static_cast<unsigned>(data.range_status));
     SendJson(req, json);
