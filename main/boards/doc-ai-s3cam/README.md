@@ -4,11 +4,15 @@
 
 - MS3625 I2S microphone: GPIO 1/2/3.
 - MAX98357A I2S amplifier: GPIO 41/42/47.
-- ST7735 1.77" GMT177-10 BLACKTAB: SPI GPIO 14/21/38/39/40, landscape 160x128.
+- ST7735 1.77" GMT177-10 BLACKTAB: SPI GPIO 14/21/38/39/40, portrait 128x160.
 - OV3660 camera: DVP data/sync GPIOs from `config.h`, SCCB GPIO 4/5, XCLK 20 MHz.
 - TTP223 touch output: GPIO 48, active-high.
 - PCA9685 + VL53L0X: shared I2C SDA GPIO 19, SCL GPIO 20.
 - BOOT button: GPIO 0.
+
+## Display orientation
+
+The ST7735 is configured in its native portrait orientation (128x160). X/Y swapping and both mirror transforms are disabled in the panel and LVGL configuration so text and numbers render in their normal reading direction.
 
 ## MCP tools
 
