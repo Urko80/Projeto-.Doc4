@@ -191,6 +191,9 @@ choice BOARD_TYPE
     config BOARD_TYPE_DF_K10
         bool "DFRobot UNIHIKER K10 (è¡Œç©ºæ¿ K10)"
         depends on IDF_TARGET_ESP32S3
+    config BOARD_TYPE_DOC_AI_S3CAM
+        bool "DOC AI S3CAM (ESP32-S3 N16R8)"
+        depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_DOIT_S3_AIBOX
         bool "DOIT S3 AIBox (å››åšæ™ºè” AI é™ªä¼´ç›’å­)"
         depends on IDF_TARGET_ESP32S3
@@ -643,9 +646,6 @@ choice BOARD_TYPE
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ZHENGCHEN_CAM
         bool "Zhengchen AI Camera Wi-Fi (å¾è¾°ç§‘æŠ€)"
-        depends on IDF_TARGET_ESP32S3
-    config BOARD_TYPE_DOC_AI_S3CAM
-        bool "DOC AI S3CAM (ESP32-S3 N16R8)"
         depends on IDF_TARGET_ESP32S3
 endchoice
 
