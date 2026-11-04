@@ -3,14 +3,11 @@
 
 #include <driver/gpio.h>
 
-// DOC AI S3CAM: ESP32-S3 N16R8
-// Board pin map for the XiaoZhi firmware.
+// DOC AI S3CAM: ESP32-S3 N16R8.
 
-// Audio rates.
+// Audio: MS3625 I2S microphone and MAX98357A I2S amplifier.
 #define AUDIO_INPUT_SAMPLE_RATE  16000
 #define AUDIO_OUTPUT_SAMPLE_RATE 24000
-
-// Separate I2S peripherals: MS3625 microphone + MAX98357A amplifier.
 #define AUDIO_I2S_METHOD_SIMPLEX
 #define AUDIO_I2S_MIC_GPIO_SCK  GPIO_NUM_1
 #define AUDIO_I2S_MIC_GPIO_WS   GPIO_NUM_2
@@ -19,34 +16,34 @@
 #define AUDIO_I2S_SPK_GPIO_LRCK GPIO_NUM_42
 #define AUDIO_I2S_SPK_GPIO_DOUT GPIO_NUM_47
 
-// Physical buttons and indicators.
+// Buttons.
 #define BOOT_BUTTON_GPIO        GPIO_NUM_0
-#define TOUCH_BUTTON_GPIO       GPIO_NUM_NC
+#define TOUCH_BUTTON_GPIO       GPIO_NUM_48
 #define ASR_BUTTON_GPIO         GPIO_NUM_NC
 #define VOLUME_UP_BUTTON_GPIO   GPIO_NUM_NC
 #define VOLUME_DOWN_BUTTON_GPIO GPIO_NUM_NC
 #define BUILTIN_LED_GPIO        GPIO_NUM_NC
 
-// ST7735 1.77" GMT177-10 (SPI).
-// The display is initialized by DocAiS3Cam::InitializeDisplay().
+// ST7735 1.77" GMT177-10, BLACKTAB. User-verified landscape orientation.
 #define DISPLAY_SPI_CLK_PIN    GPIO_NUM_14
 #define DISPLAY_SPI_MOSI_PIN   GPIO_NUM_21
 #define DISPLAY_CS_PIN         GPIO_NUM_38
 #define DISPLAY_DC_PIN         GPIO_NUM_39
 #define DISPLAY_RST_PIN        GPIO_NUM_40
 #define DISPLAY_BACKLIGHT_PIN  GPIO_NUM_NC
-#define DISPLAY_WIDTH          128
-#define DISPLAY_HEIGHT         160
+#define DISPLAY_WIDTH          160
+#define DISPLAY_HEIGHT         128
 #define DISPLAY_OFFSET_X       0
 #define DISPLAY_OFFSET_Y       0
 #define DISPLAY_MIRROR_X       false
 #define DISPLAY_MIRROR_Y       false
-#define DISPLAY_SWAP_XY        false
+#define DISPLAY_SWAP_XY        true
 #define DISPLAY_INVERT_COLOR   false
 #define DISPLAY_SPI_MODE       0
+#define DISPLAY_SPI_CLOCK_HZ   (27 * 1000 * 1000)
 #define DISPLAY_BACKLIGHT_OUTPUT_INVERT false
 
-// OV3660 camera wiring (SCCB uses its own GPIO 4/5 bus).
+// OV3660 camera. SCCB uses its dedicated GPIO 4/5 pins.
 #define CAMERA_PIN_XCLK  GPIO_NUM_15
 #define CAMERA_PIN_SIOD  GPIO_NUM_4
 #define CAMERA_PIN_SIOC  GPIO_NUM_5
@@ -64,14 +61,24 @@
 #define CAMERA_PIN_PWDN  GPIO_NUM_NC
 #define CAMERA_PIN_RESET GPIO_NUM_NC
 #define XCLK_FREQ_HZ     20000000
+#define CAMERA_VFLIP     true
+#define CAMERA_HMIRROR   false
 
-// Shared external I2C bus: PCA9685 + VL53L0X.
-// IMPORTANT: GPIO 19/20 are also native USB D-/D+ on ESP32-S3.
-// Do not use native USB while these pins are assigned to I2C.
+// Shared external I2C bus for PCA9685 and VL53L0X.
+// GPIO 19/20 are also native USB D-/D+; native USB cannot be used concurrently.
 #define DOC_I2C_SDA_GPIO       GPIO_NUM_19
 #define DOC_I2C_SCL_GPIO       GPIO_NUM_20
 #define DOC_I2C_FREQUENCY_HZ   100000
 #define PCA9685_I2C_ADDRESS    0x40
 #define VL53L0X_I2C_ADDRESS    0x29
+
+// Servo settings: only the two continuous-rotation wheel channels have
+// documented test values. Other PCA9685 channels remain untouched.
+#define PCA9685_WHEEL1_CW_US    1665
+#define PCA9685_WHEEL1_STOP_US  1705
+#define PCA9685_WHEEL1_CCW_US   1750
+#define PCA9685_WHEEL2_CW_US    1665
+#define PCA9685_WHEEL2_STOP_US  1705
+#define PCA9685_WHEEL2_CCW_US   1755
 
 #endif // DOC_AI_S3CAM_CONFIG_H
