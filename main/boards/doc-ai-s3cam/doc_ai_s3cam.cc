@@ -316,10 +316,10 @@ public:
         if (distance_sensor_ != nullptr) {
             vl53l0x_driver_delete(distance_sensor_);
         }
+        delete pca9685_;
         if (i2c_bus_ != nullptr) {
             i2c_del_master_bus(i2c_bus_);
         }
-        delete pca9685_;
         delete camera_;
         delete display_;
     }
