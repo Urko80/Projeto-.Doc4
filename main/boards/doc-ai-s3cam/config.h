@@ -3,16 +3,11 @@
 
 #include <driver/gpio.h>
 
-// DOC AI S3CAM: ESP32-S3 N16R8
-// First milestone: native XiaoZhi Wi-Fi + I2S microphone/speaker.
-// Camera and ST7735 pins are recorded here but are not initialized by this first
-// board revision; they are deliberately kept out of the boot path until the
-// correct display driver and camera integration are added.
+// DOC AI S3CAM: ESP32-S3 N16R8.
 
+// Audio: MS3625 I2S microphone and MAX98357A I2S amplifier.
 #define AUDIO_INPUT_SAMPLE_RATE  16000
 #define AUDIO_OUTPUT_SAMPLE_RATE 24000
-
-// Separate I2S peripherals: MS3625 microphone + MAX98357A amplifier.
 #define AUDIO_I2S_METHOD_SIMPLEX
 #define AUDIO_I2S_MIC_GPIO_SCK  GPIO_NUM_1
 #define AUDIO_I2S_MIC_GPIO_WS   GPIO_NUM_2
@@ -21,15 +16,17 @@
 #define AUDIO_I2S_SPK_GPIO_LRCK GPIO_NUM_42
 #define AUDIO_I2S_SPK_GPIO_DOUT GPIO_NUM_47
 
+// Buttons.
 #define BOOT_BUTTON_GPIO        GPIO_NUM_0
-#define TOUCH_BUTTON_GPIO       GPIO_NUM_NC
+#define TOUCH_BUTTON_GPIO       GPIO_NUM_48
 #define ASR_BUTTON_GPIO         GPIO_NUM_NC
 #define VOLUME_UP_BUTTON_GPIO   GPIO_NUM_NC
 #define VOLUME_DOWN_BUTTON_GPIO GPIO_NUM_NC
 #define BUILTIN_LED_GPIO        GPIO_NUM_NC
 
-// ST7735 1.77" GMT177-10 (SPI). Pin map only in milestone 1.
-// Do not select the ST7789 driver for this panel.
+// ST7735 1.77" GMT177-10 BLACKTAB.
+// Native portrait orientation: 128 pixels wide by 160 pixels high.
+// Keep all rotation/mirroring transforms disabled for readable, non-mirrored text.
 #define DISPLAY_SPI_CLK_PIN    GPIO_NUM_14
 #define DISPLAY_SPI_MOSI_PIN   GPIO_NUM_21
 #define DISPLAY_CS_PIN         GPIO_NUM_38
@@ -45,9 +42,10 @@
 #define DISPLAY_SWAP_XY        false
 #define DISPLAY_INVERT_COLOR   false
 #define DISPLAY_SPI_MODE       0
+#define DISPLAY_SPI_CLOCK_HZ   (27 * 1000 * 1000)
 #define DISPLAY_BACKLIGHT_OUTPUT_INVERT false
 
-// OV3660 camera wiring. Defined for the next integration milestone.
+// OV3660 camera. SCCB uses its dedicated GPIO 4/5 pins.
 #define CAMERA_PIN_XCLK  GPIO_NUM_15
 #define CAMERA_PIN_SIOD  GPIO_NUM_4
 #define CAMERA_PIN_SIOC  GPIO_NUM_5
@@ -65,8 +63,24 @@
 #define CAMERA_PIN_PWDN  GPIO_NUM_NC
 #define CAMERA_PIN_RESET GPIO_NUM_NC
 #define XCLK_FREQ_HZ     20000000
+#define CAMERA_VFLIP     true
+#define CAMERA_HMIRROR   false
 
-// PCA9685 pins are intentionally not assigned here because the user's confirmed
-// pin list does not yet specify the driver's SDA/SCL wiring.
+// Shared external I2C bus for PCA9685 and VL53L0X.
+// GPIO 19/20 are also native USB D-/D+; native USB cannot be used concurrently.
+#define DOC_I2C_SDA_GPIO       GPIO_NUM_19
+#define DOC_I2C_SCL_GPIO       GPIO_NUM_20
+#define DOC_I2C_FREQUENCY_HZ   100000
+#define PCA9685_I2C_ADDRESS    0x40
+#define VL53L0X_I2C_ADDRESS    0x29
+
+// Servo settings: only the two continuous-rotation wheel channels have
+// documented test values. Other PCA9685 channels remain untouched.
+#define PCA9685_WHEEL1_CW_US    1665
+#define PCA9685_WHEEL1_STOP_US  1705
+#define PCA9685_WHEEL1_CCW_US   1750
+#define PCA9685_WHEEL2_CW_US    1665
+#define PCA9685_WHEEL2_STOP_US  1705
+#define PCA9685_WHEEL2_CCW_US   1755
 
 #endif // DOC_AI_S3CAM_CONFIG_H

@@ -135,28 +135,28 @@ choice BOARD_TYPE
         The OTA board type and firmware variant name are configured separately.
 
     config BOARD_TYPE_ATK_DNESP32S3
-        bool "Alientek ATK-DNESP32S3 Development Board (æ­£ç‚¹åŽŸå­)"
+        bool "Alientek ATK-DNESP32S3 Development Board (正点原子)"
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ATK_DNESP32S3_BOX
-        bool "Alientek ATK-DNESP32S3-BOX (æ­£ç‚¹åŽŸå­)"
+        bool "Alientek ATK-DNESP32S3-BOX (正点原子)"
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ATK_DNESP32S3_BOX0
-        bool "Alientek ATK-DNESP32S3-BOX0 (æ­£ç‚¹åŽŸå­)"
+        bool "Alientek ATK-DNESP32S3-BOX0 (正点原子)"
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ATK_DNESP32S3_BOX2_4G
-        bool "Alientek ATK-DNESP32S3-BOX2 4G (æ­£ç‚¹åŽŸå­)"
+        bool "Alientek ATK-DNESP32S3-BOX2 4G (正点原子)"
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ATK_DNESP32S3_BOX2_WIFI
-        bool "Alientek ATK-DNESP32S3-BOX2 Wi-Fi (æ­£ç‚¹åŽŸå­)"
+        bool "Alientek ATK-DNESP32S3-BOX2 Wi-Fi (正点原子)"
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ATK_DNESP32S3_BOX3
-        bool "Alientek ATK-DNESP32S3-BOX3 (æ­£ç‚¹åŽŸå­)"
+        bool "Alientek ATK-DNESP32S3-BOX3 (正点原子)"
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ATK_DNESP32S3M_4G
-        bool "Alientek ATK-DNESP32S3M 4G (æ­£ç‚¹åŽŸå­)"
+        bool "Alientek ATK-DNESP32S3M 4G (正点原子)"
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ATK_DNESP32S3M_WIFI
-        bool "Alientek ATK-DNESP32S3M Wi-Fi (æ­£ç‚¹åŽŸå­)"
+        bool "Alientek ATK-DNESP32S3M Wi-Fi (正点原子)"
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_BREAD_COMPACT_ESP32
         bool "Bread Compact ESP32 DevKit (é¢åŒ…æ¿)"
@@ -190,6 +190,9 @@ choice BOARD_TYPE
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_DF_K10
         bool "DFRobot UNIHIKER K10 (è¡Œç©ºæ¿ K10)"
+        depends on IDF_TARGET_ESP32S3
+    config BOARD_TYPE_DOC_AI_S3CAM
+        bool "DOC AI S3CAM (ESP32-S3 N16R8)"
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_DOIT_S3_AIBOX
         bool "DOIT S3 AIBox (å››åšæ™ºè” AI é™ªä¼´ç›’å­)"
@@ -643,9 +646,6 @@ choice BOARD_TYPE
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ZHENGCHEN_CAM
         bool "Zhengchen AI Camera Wi-Fi (å¾è¾°ç§‘æŠ€)"
-        depends on IDF_TARGET_ESP32S3
-    config BOARD_TYPE_DOC_AI_S3CAM
-        bool "DOC AI S3CAM (ESP32-S3 N16R8)"
         depends on IDF_TARGET_ESP32S3
 endchoice
 

@@ -1100,6 +1100,14 @@ if(CONFIG_IDF_TARGET_ESP32S3)
 endif()
 
 set(MAIN_PRIV_REQUIRES_EXTRA "")
+if(BOARD_TYPE STREQUAL "doc-ai-s3cam")
+    list(APPEND MAIN_PRIV_REQUIRES_EXTRA
+        espressif__esp32-camera
+        waveshare__esp_lcd_st7735
+        vl53l0x_driver
+    )
+endif()
+
 if(CONFIG_XIAOZHI_NETWORK_ETHERNET AND CONFIG_XIAOZHI_ETH_PHY_IP101)
     list(APPEND MAIN_PRIV_REQUIRES_EXTRA espressif__ip101)
 endif()
