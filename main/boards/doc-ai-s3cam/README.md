@@ -1,59 +1,44 @@
-# DOC AI S3CAM — XiaoZhi board
+# DOC AI S3CAM — ESP32-S3 N16R8
 
-## Hardware and firmware status
+## Integrated hardware
 
-- Target: ESP32-S3 N16R8.
-- XiaoZhi network/protocol path: `WifiBoard` + shared `Application`.
-- I2S simplex audio: MS3625 microphone and MAX98357A amplifier.
-- BOOT button: enters Wi-Fi configuration while starting; otherwise toggles chat.
-- Display: ST7735 1.77" initialized by `DocAiS3Cam::InitializeDisplay()`.
-- Camera: OV3660 pin map is present, but camera initialization is not implemented in this board class.
-- PCA9685 and VL53L0X: shared I2C pin map is declared; sensor drivers and runtime initialization are not yet implemented.
+- MS3625 I2S microphone: GPIO 1/2/3.
+- MAX98357A I2S amplifier: GPIO 41/42/47.
+- ST7735 1.77" GMT177-10 BLACKTAB: SPI GPIO 14/21/38/39/40, landscape 160x128.
+- OV3660 camera: DVP data/sync GPIOs from `config.h`, SCCB GPIO 4/5, XCLK 20 MHz.
+- TTP223 touch output: GPIO 48, active-high.
+- PCA9685 + VL53L0X: shared I2C SDA GPIO 19, SCL GPIO 20.
+- BOOT button: GPIO 0.
 
-## Confirmed pin map
+## MCP tools
 
-| Signal | GPIO |
-|---|---:|
-| Microphone BCLK/SCK | 1 |
-| Microphone WS/LRCL | 2 |
-| Microphone DOUT | 3 |
-| OV3660 SCCB SDA | 4 |
-| OV3660 SCCB SCL | 5 |
-| ST7735 SPI CLK | 14 |
-| OV3660 XCLK | 15 |
-| ST7735 SPI MOSI | 21 |
-| PCA9685 + VL53L0X SDA | 19 |
-| PCA9685 + VL53L0X SCL | 20 |
-| ST7735 CS | 38 |
-| ST7735 DC | 39 |
-| ST7735 RESET | 40 |
-| MAX98357A BCLK | 41 |
-| MAX98357A LRC | 42 |
-| MAX98357A DIN | 47 |
-| TTP223 OUT | 48 |
+When the corresponding device initializes successfully, the firmware registers:
 
-## I2C and USB warning
+- `self.doc.distance.read`: one VL53L0X measurement in millimeters.
+- `self.doc.wheels.set`: controls the two continuous-rotation wheels on PCA9685 channels 1 and 2. Each wheel accepts `cw`, `ccw`, or `stop`.
 
-The PCA9685 and VL53L0X share the external I2C bus:
+Only the wheel channels with recorded pulse calibration are enabled:
+- Wheel 1 / channel 1: CW 1665 µs, stop 1705 µs, CCW 1750 µs.
+- Wheel 2 / channel 2: CW 1665 µs, stop 1705 µs, CCW 1755 µs.
 
-- SDA: GPIO 19
-- SCL: GPIO 20
-- PCA9685 default address: 0x40
-- VL53L0X default address: 0x29
+Other PCA9685 channels are left untouched because their mechanical limits are not yet calibrated.
 
-On ESP32-S3, GPIO 19 and GPIO 20 are also native USB D- and D+.
-Using them for I2C prevents using the native USB interface at the same time.
-A USB-to-UART bridge on separate pins is not the same interface and may remain usable.
+## I2C / USB note
+
+The PCA9685 (default address 0x40) and VL53L0X (default address 0x29) share the I2C master bus on GPIO 19/20. These GPIOs are also native USB D-/D+ on ESP32-S3; native USB cannot be used at the same time as this I2C assignment. USB-to-UART connections on separate pins are unaffected.
 
 The OV3660 SCCB bus remains separate on GPIO 4/5.
 
 ## Build
 
-Run from the repository root with the ESP-IDF environment initialized:
+From the repository root with the ESP-IDF 6.0.1+ environment activated:
 
 ```powershell
 python scripts/build.py doc-ai-s3cam --name doc-ai-s3cam
 ```
 
-This selects the board configuration from `main/boards/doc-ai-s3cam/config.json`.
-A successful build and hardware validation are still required before treating the firmware as tested.
+The VL53L0X driver is pinned to a specific Git commit through the ESP-IDF Component Manager. The first configure/build downloads that dependency.
+
+## Validation status
+
+This integration is source-level only until the board is built and tested physically. Confirm I2C pull-ups and common ground, and verify the camera's 20 MHz XCLK against the specific OV3660 module. The board has 8 MB PSRAM; the camera is configured for RGB565 QQVGA (160x120) with one PSRAM framebuffer.
