@@ -4,11 +4,9 @@
 #include <driver/gpio.h>
 
 // DOC AI S3CAM: ESP32-S3 N16R8
-// First milestone: native XiaoZhi Wi-Fi + I2S microphone/speaker.
-// Camera and ST7735 pins are recorded here but are not initialized by this first
-// board revision; they are deliberately kept out of the boot path until the
-// correct display driver and camera integration are added.
+// Board pin map for the XiaoZhi firmware.
 
+// Audio rates.
 #define AUDIO_INPUT_SAMPLE_RATE  16000
 #define AUDIO_OUTPUT_SAMPLE_RATE 24000
 
@@ -21,6 +19,7 @@
 #define AUDIO_I2S_SPK_GPIO_LRCK GPIO_NUM_42
 #define AUDIO_I2S_SPK_GPIO_DOUT GPIO_NUM_47
 
+// Physical buttons and indicators.
 #define BOOT_BUTTON_GPIO        GPIO_NUM_0
 #define TOUCH_BUTTON_GPIO       GPIO_NUM_NC
 #define ASR_BUTTON_GPIO         GPIO_NUM_NC
@@ -28,8 +27,8 @@
 #define VOLUME_DOWN_BUTTON_GPIO GPIO_NUM_NC
 #define BUILTIN_LED_GPIO        GPIO_NUM_NC
 
-// ST7735 1.77" GMT177-10 (SPI). Pin map only in milestone 1.
-// Do not select the ST7789 driver for this panel.
+// ST7735 1.77" GMT177-10 (SPI).
+// The display is initialized by DocAiS3Cam::InitializeDisplay().
 #define DISPLAY_SPI_CLK_PIN    GPIO_NUM_14
 #define DISPLAY_SPI_MOSI_PIN   GPIO_NUM_21
 #define DISPLAY_CS_PIN         GPIO_NUM_38
@@ -47,7 +46,7 @@
 #define DISPLAY_SPI_MODE       0
 #define DISPLAY_BACKLIGHT_OUTPUT_INVERT false
 
-// OV3660 camera wiring. Defined for the next integration milestone.
+// OV3660 camera wiring (SCCB uses its own GPIO 4/5 bus).
 #define CAMERA_PIN_XCLK  GPIO_NUM_15
 #define CAMERA_PIN_SIOD  GPIO_NUM_4
 #define CAMERA_PIN_SIOC  GPIO_NUM_5
@@ -66,7 +65,13 @@
 #define CAMERA_PIN_RESET GPIO_NUM_NC
 #define XCLK_FREQ_HZ     20000000
 
-// PCA9685 pins are intentionally not assigned here because the user's confirmed
-// pin list does not yet specify the driver's SDA/SCL wiring.
+// Shared external I2C bus: PCA9685 + VL53L0X.
+// IMPORTANT: GPIO 19/20 are also native USB D-/D+ on ESP32-S3.
+// Do not use native USB while these pins are assigned to I2C.
+#define DOC_I2C_SDA_GPIO       GPIO_NUM_19
+#define DOC_I2C_SCL_GPIO       GPIO_NUM_20
+#define DOC_I2C_FREQUENCY_HZ   100000
+#define PCA9685_I2C_ADDRESS    0x40
+#define VL53L0X_I2C_ADDRESS    0x29
 
 #endif // DOC_AI_S3CAM_CONFIG_H
