@@ -230,7 +230,7 @@ private:
         config.fb_location = CAMERA_FB_IN_PSRAM;
         config.grab_mode = CAMERA_GRAB_LATEST;
         config.sccb_i2c_port = 1; // Fallback port; with GPIO 4/5 set, esp32-camera creates its SCCB bus on I2C1 by default.
-        config.jpeg_buffer_size = 0;
+        // camera_config_t in esp32-camera 2.1.7 has no jpeg_buffer_size field.
 
         camera_ = new Esp32Camera(config);
         camera_->SetVFlip(CAMERA_VFLIP);
