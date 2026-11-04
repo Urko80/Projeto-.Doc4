@@ -27,7 +27,7 @@ Other PCA9685 channels are left untouched because their mechanical limits are no
 
 The PCA9685 (default address 0x40) and VL53L0X (default address 0x29) share the I2C master bus on GPIO 19/20. These GPIOs are also native USB D-/D+ on ESP32-S3; native USB cannot be used at the same time as this I2C assignment. USB-to-UART connections on separate pins are unaffected.
 
-The OV3660 SCCB bus remains separate on GPIO 4/5.
+The OV3660 SCCB bus remains separate on GPIO 4/5 and I2C1 (the `esp32-camera` component's default SCCB controller). PCA9685/VL53L0X use the ESP-IDF I2C master bus I2C0 on GPIO 19/20.
 
 ## Build
 
